@@ -54,11 +54,3 @@ chmod +x ~/launch_rstudio.sh
 ```bash
 ~/launch_rstudio.sh
 ```
-No `module load`, no path exports, no restarts.
-
-## How to add a new package
-
-1. Edit `Dockerfile` — add your package to the relevant `install.packages()` block
-2. Commit and push with GitHub Desktop
-3. GitHub Actions rebuilds automatically (only changed layers, ~5-15 min)
-4. On TRUBA, re-pull: `apptainer pull --force $HOME/containers/scrna-rstudio.sif docker://nkaankutlu/scrna-rstudio:latest`
