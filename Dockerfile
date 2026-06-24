@@ -1,9 +1,6 @@
 # ============================================================
 # scRNA-seq + Spatial Transcriptomics RStudio Container
 # Base: satijalab/seurat:latest
-# Seurat + all its system dependencies (HDF5, Cairo, libpng,
-# libmagick, libgdal, libgeos, libssl, etc.) are already
-# solved in the base image. We only add on top.
 # ============================================================
 
 FROM satijalab/seurat:latest
@@ -11,7 +8,12 @@ FROM satijalab/seurat:latest
 USER root
 
 # -----------------------------------------------------------
-# Extra system libraries not covered by the Seurat base image
+# Check what R version and Bioconductor we're working with
+# -----------------------------------------------------------
+RUN R -e "R.version; BiocManager::version()"
+
+# -----------------------------------------------------------
+# Extra system libraries
 # -----------------------------------------------------------
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libgsl-dev \
@@ -24,16 +26,14 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # -----------------------------------------------------------
-# Python — use a virtual environment to avoid system conflicts
+# Python virtual environment
 # -----------------------------------------------------------
 ENV VENV=/opt/scrna-venv
 RUN python3 -m venv $VENV
 ENV PATH="$VENV/bin:$PATH"
 
-# Upgrade pip inside venv first
 RUN pip install --no-cache-dir --upgrade pip setuptools wheel
 
-# Core scientific stack first (pinned to avoid resolver conflicts)
 RUN pip install --no-cache-dir \
     "numpy<2.0" \
     "pandas>=1.5" \
@@ -41,7 +41,6 @@ RUN pip install --no-cache-dir \
     matplotlib \
     scikit-learn
 
-# Single-cell packages (anndata before scanpy, leidenalg needs igraph first)
 RUN pip install --no-cache-dir \
     anndata \
     igraph \
@@ -49,112 +48,109 @@ RUN pip install --no-cache-dir \
 
 RUN pip install --no-cache-dir scanpy
 
-# Spatial + integration tools
 RUN pip install --no-cache-dir \
     squidpy \
     harmonypy \
     bbknn \
     scikit-misc
 
-# scvi-tools last — heavy deps, install separately so failures are isolated
 RUN pip install --no-cache-dir scvi-tools
 
-# cellpose separately (has its own torch dependency)
 RUN pip install --no-cache-dir cellpose
 
-# Tell reticulate to use the venv python
 ENV RETICULATE_PYTHON="$VENV/bin/python"
 
 # -----------------------------------------------------------
-# Bioconductor — single-cell core
+# Bioconductor — install each package individually so a single
+# failure does not abort the entire layer
 # -----------------------------------------------------------
-RUN R -e "BiocManager::install(c( \
-    'SingleCellExperiment', \
-    'scran', \
-    'scater', \
-    'scuttle', \
-    'scDblFinder', \
-    'DESeq2', \
-    'edgeR', \
-    'limma', \
-    'glmGamPoi', \
-    'ComplexHeatmap', \
-    'clusterProfiler', \
-    'enrichplot', \
-    'org.Hs.eg.db', \
-    'org.Mm.eg.db', \
-    'AnnotationHub', \
-    'GenomicRanges', \
-    'BiocParallel' \
-), ask=FALSE, update=FALSE)"
 
-# -----------------------------------------------------------
-# Bioconductor — spatial transcriptomics
-# -----------------------------------------------------------
-RUN R -e "BiocManager::install(c( \
-    'SpatialExperiment', \
-    'nnSVG', \
-    'SPARK', \
-    'Banksy', \
-    'BayesSpace' \
-), ask=FALSE, update=FALSE)"
+RUN R -e "BiocManager::install('SingleCellExperiment', ask=FALSE, update=FALSE)"
+RUN R -e "BiocManager::install('scran',                ask=FALSE, update=FALSE)"
+RUN R -e "BiocManager::install('scater',               ask=FALSE, update=FALSE)"
+RUN R -e "BiocManager::install('scuttle',              ask=FALSE, update=FALSE)"
+RUN R -e "BiocManager::install('scDblFinder',          ask=FALSE, update=FALSE)"
+RUN R -e "BiocManager::install('DESeq2',               ask=FALSE, update=FALSE)"
+RUN R -e "BiocManager::install('edgeR',                ask=FALSE, update=FALSE)"
+RUN R -e "BiocManager::install('limma',                ask=FALSE, update=FALSE)"
+RUN R -e "BiocManager::install('glmGamPoi',            ask=FALSE, update=FALSE)"
+RUN R -e "BiocManager::install('ComplexHeatmap',       ask=FALSE, update=FALSE)"
+RUN R -e "BiocManager::install('clusterProfiler',      ask=FALSE, update=FALSE)"
+RUN R -e "BiocManager::install('enrichplot',           ask=FALSE, update=FALSE)"
+RUN R -e "BiocManager::install('org.Hs.eg.db',         ask=FALSE, update=FALSE)"
+RUN R -e "BiocManager::install('org.Mm.eg.db',         ask=FALSE, update=FALSE)"
+RUN R -e "BiocManager::install('AnnotationHub',        ask=FALSE, update=FALSE)"
+RUN R -e "BiocManager::install('GenomicRanges',        ask=FALSE, update=FALSE)"
+RUN R -e "BiocManager::install('BiocParallel',         ask=FALSE, update=FALSE)"
+RUN R -e "BiocManager::install('SpatialExperiment',    ask=FALSE, update=FALSE)"
+RUN R -e "BiocManager::install('nnSVG',                ask=FALSE, update=FALSE)"
+RUN R -e "BiocManager::install('BayesSpace',           ask=FALSE, update=FALSE)"
+RUN R -e "BiocManager::install('EnsDb.Hsapiens.v86',   ask=FALSE, update=FALSE)"
+RUN R -e "BiocManager::install('EnsDb.Mmusculus.v79',  ask=FALSE, update=FALSE)"
+RUN R -e "BiocManager::install('TFBSTools',            ask=FALSE, update=FALSE)"
+RUN R -e "BiocManager::install('JASPAR2020',           ask=FALSE, update=FALSE)"
+RUN R -e "BiocManager::install('motifmatchr',          ask=FALSE, update=FALSE)"
+RUN R -e "BiocManager::install('chromVAR',             ask=FALSE, update=FALSE)"
 
-# -----------------------------------------------------------
-# Bioconductor — chromatin / multiome (Signac deps)
-# -----------------------------------------------------------
-RUN R -e "BiocManager::install(c( \
-    'EnsDb.Hsapiens.v86', \
-    'EnsDb.Mmusculus.v79', \
-    'BSgenome.Hsapiens.UCSC.hg38', \
-    'BSgenome.Mmusculus.UCSC.mm10', \
-    'TFBSTools', \
-    'JASPAR2020', \
-    'motifmatchr', \
-    'chromVAR' \
-), ask=FALSE, update=FALSE)"
+# Large genome packages — each is ~700 MB, separate layers
+RUN R -e "BiocManager::install('BSgenome.Hsapiens.UCSC.hg38', ask=FALSE, update=FALSE)"
+RUN R -e "BiocManager::install('BSgenome.Mmusculus.UCSC.mm10', ask=FALSE, update=FALSE)"
 
 # -----------------------------------------------------------
 # CRAN packages
 # -----------------------------------------------------------
 RUN R -e "install.packages(c( \
-    'harmony', \
-    'patchwork', \
-    'viridis', \
-    'viridisLite', \
-    'pheatmap', \
-    'ggrepel', \
-    'cowplot', \
-    'ggplot2', \
-    'dplyr', \
-    'tidyr', \
-    'tibble', \
-    'stringr', \
-    'Matrix', \
-    'irlba', \
-    'RcppAnnoy', \
-    'RANN', \
-    'hdf5r', \
-    'SeuratDisk', \
-    'presto', \
-    'DoubletFinder', \
-    'lme4', \
-    'broom', \
-    'ggpubr', \
-    'rstatix', \
-    'circlize', \
-    'ggalluvial', \
-    'clustree', \
-    'leiden', \
-    'reticulate' \
+    'harmony', 'patchwork', 'viridis', 'viridisLite', \
+    'pheatmap', 'ggrepel', 'cowplot', 'ggplot2', \
+    'dplyr', 'tidyr', 'tibble', 'stringr' \
 ), repos='https://cloud.r-project.org')"
 
-# Signac (CRAN version)
+RUN R -e "install.packages(c( \
+    'Matrix', 'irlba', 'RcppAnnoy', 'RANN', \
+    'hdf5r', 'presto', 'lme4', 'broom' \
+), repos='https://cloud.r-project.org')"
+
+RUN R -e "install.packages(c( \
+    'ggpubr', 'rstatix', 'circlize', 'ggalluvial', \
+    'clustree', 'leiden', 'reticulate' \
+), repos='https://cloud.r-project.org')"
+
+RUN R -e "install.packages('SeuratDisk', repos='https://cloud.r-project.org')"
+RUN R -e "install.packages('DoubletFinder', repos='https://cloud.r-project.org')"
 RUN R -e "install.packages('Signac', repos='https://cloud.r-project.org')"
 
 # -----------------------------------------------------------
-# Verify key packages load (catches broken installs at build
-# time rather than at runtime on TRUBA)
+# Visualization — ggplot2 extensions & plot utilities
 # -----------------------------------------------------------
-RUN R -e "library(Seurat); library(harmony); library(scran); \
-    library(SpatialExperiment); library(reticulate); \
-    cat('All key packages load OK\n')"
+RUN R -e "install.packages(c( \
+    'ggforce', 'ggfun', 'ggnewscale', 'ggridges', \
+    'ggdensity', 'ggExtra', 'ggplotify', 'ggthemes', \
+    'ggsci', 'RColorBrewer', 'paletteer', 'scales', \
+    'colorspace', 'gridExtra' \
+), repos='https://cloud.r-project.org')"
+
+# Spatial visualization (Bioconductor)
+RUN R -e "BiocManager::install('ggspavis', ask=FALSE, update=FALSE)"
+
+# Interactive / export
+RUN R -e "install.packages(c( \
+    'plotly', 'htmlwidgets', 'svglite', 'Cairo' \
+), repos='https://cloud.r-project.org')"
+
+# Heatmap alternatives
+RUN R -e "install.packages('superheat', repos='https://cloud.r-project.org')"
+
+# -----------------------------------------------------------
+# Data manipulation & workflow utilities
+# -----------------------------------------------------------
+RUN R -e "install.packages(c( \
+    'data.table', 'purrr', 'forcats', \
+    'lubridate', 'glue', 'janitor', \
+    'readxl', 'writexl', 'openxlsx' \
+), repos='https://cloud.r-project.org')"
+
+# -----------------------------------------------------------
+# Cell type annotation
+# -----------------------------------------------------------
+RUN R -e "BiocManager::install('SingleR', ask=FALSE, update=FALSE)"
+RUN R -e "BiocManager::install('celldex', ask=FALSE, update=FALSE)"
