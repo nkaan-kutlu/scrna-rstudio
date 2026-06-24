@@ -1,7 +1,7 @@
 # scRNA-seq + Spatial Transcriptomics RStudio Container
 
 Docker image for single-cell and spatial transcriptomics analysis,
-designed to run on the TRUBA HPC system via Apptainer/Singularity.
+designed to run on the HPC system via Apptainer/Singularity.
 
 Built on top of `satijalab/seurat:latest` so all system libraries
 (HDF5, Cairo, libpng, libmagick, GDAL, etc.) are already solved.
