@@ -24,26 +24,46 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # -----------------------------------------------------------
-# Python packages (single-cell analysis via reticulate)
+# Python — use a virtual environment to avoid system conflicts
 # -----------------------------------------------------------
-RUN pip3 install --no-cache-dir \
-    scanpy \
+ENV VENV=/opt/scrna-venv
+RUN python3 -m venv $VENV
+ENV PATH="$VENV/bin:$PATH"
+
+# Upgrade pip inside venv first
+RUN pip install --no-cache-dir --upgrade pip setuptools wheel
+
+# Core scientific stack first (pinned to avoid resolver conflicts)
+RUN pip install --no-cache-dir \
+    "numpy<2.0" \
+    "pandas>=1.5" \
+    scipy \
+    matplotlib \
+    scikit-learn
+
+# Single-cell packages (anndata before scanpy, leidenalg needs igraph first)
+RUN pip install --no-cache-dir \
     anndata \
-    leidenalg \
-    scvi-tools \
+    igraph \
+    leidenalg
+
+RUN pip install --no-cache-dir scanpy
+
+# Spatial + integration tools
+RUN pip install --no-cache-dir \
     squidpy \
     harmonypy \
     bbknn \
-    scikit-misc \
-    igraph \
-    numpy \
-    pandas \
-    matplotlib \
-    scipy \
-    cellpose
+    scikit-misc
 
-# Tell reticulate where Python is
-ENV RETICULATE_PYTHON=/usr/bin/python3
+# scvi-tools last — heavy deps, install separately so failures are isolated
+RUN pip install --no-cache-dir scvi-tools
+
+# cellpose separately (has its own torch dependency)
+RUN pip install --no-cache-dir cellpose
+
+# Tell reticulate to use the venv python
+ENV RETICULATE_PYTHON="$VENV/bin/python"
 
 # -----------------------------------------------------------
 # Bioconductor — single-cell core

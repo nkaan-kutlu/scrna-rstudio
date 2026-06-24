@@ -1,7 +1,7 @@
 #!/bin/bash
 # ============================================================
 # launch_rstudio.sh
-# Run this in your TRUBA interactive desktop terminal.
+# Run this in terminal.
 # No module load, no path exports needed.
 # ============================================================
 

@@ -22,7 +22,7 @@ Built on top of `satijalab/seurat:latest` so all system libraries
 - scanpy, anndata, scvi-tools, squidpy
 - leidenalg, harmonypy, bbknn, cellpose
 
-## How to use on TRUBA
+## How to use on HPC system
 
 ### 1. Pull the image (do this once)
 ```bash
@@ -50,7 +50,7 @@ apptainer exec \
 chmod +x ~/launch_rstudio.sh
 ```
 
-### 3. Use it (in your interactive desktop terminal)
+### 3. Use it in an interactive desktop terminal
 ```bash
 ~/launch_rstudio.sh
 ```
