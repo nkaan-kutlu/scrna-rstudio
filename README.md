@@ -2,6 +2,8 @@
 
 A portable, reproducible Docker/Apptainer container for single-cell RNA sequencing and spatial transcriptomics analysis. Built on top of [`satijalab/seurat`](https://hub.docker.com/r/satijalab/seurat) so all system-level dependencies (HDF5, Cairo, libpng, libmagick, GDAL, etc.) are pre-solved — no manual library compilation required.
 
+[![Docker Hub](https://img.shields.io/docker/pulls/nkaankutlu/scrna-rstudio)](https://hub.docker.com/r/nkaankutlu/scrna-rstudio)
+
 
 ---
 
@@ -174,5 +176,17 @@ install.packages("newpackage")
 apptainer pull --force $HOME/containers/scrna-rstudio.sif \
     docker://nkaankutlu/scrna-rstudio:latest
 ```
+
+---
+
+## Citation
+
+If you use this container in your research, please cite:
+
+DOI: 10.5281/zenodo.20846958
+
+https://doi.org/10.5281/zenodo.20846958
+
+*Please also cite the underlying tools you use.*
 
 ---
