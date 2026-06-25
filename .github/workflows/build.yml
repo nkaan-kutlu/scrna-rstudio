@@ -28,29 +28,74 @@ jobs:
 
       # ── 2. Check out your repo ────────────────────────────────────────────
       - name: Checkout repository
-        uses: actions/checkout@v4.2.2
+        uses: actions/checkout@v4
 
       # ── 3. Log in to Docker Hub ───────────────────────────────────────────
       - name: Log in to Docker Hub
-        uses: docker/login-action@v3.4.0
+        uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       # ── 4. Set up Docker Buildx (needed for layer caching) ───────────────
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3.10.0
+        uses: docker/setup-buildx-action@v3
 
       # ── 5. Build and push ─────────────────────────────────────────────────
       # Cache is stored in Docker Hub itself so repeated builds
       # (e.g. after adding one new package) only recompile changed layers.
+      name: Build and Push scRNA RStudio Image
+
+on:
+  push:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+
+    steps:
+
+      # ── 1. Free up GitHub runner disk space ──────────────────
+      - name: Free disk space
+        run: |
+          echo "Disk before cleanup:"
+          df -h
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /usr/local/lib/android
+          sudo rm -rf /opt/ghc
+          sudo rm -rf /opt/hostedtoolcache/CodeQL
+          sudo docker image prune --all --force
+          echo "Disk after cleanup:"
+          df -h
+
+      # ── 2. Check out repository ───────────────────────────────
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # ── 3. Log in to Docker Hub ───────────────────────────────
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      # ── 4. Set up Docker Buildx ───────────────────────────────
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # ── 5. Build and push ─────────────────────────────────────
       - name: Build and push image
-        uses: docker/build-push-action@v6.16.0
+        uses: docker/build-push-action@v6
         with:
           context: .
           push: true
+          provenance: false
+          sbom: false
           tags: |
             ${{ secrets.DOCKERHUB_USERNAME }}/scrna-rstudio:latest
             ${{ secrets.DOCKERHUB_USERNAME }}/scrna-rstudio:${{ github.sha }}
-          cache-from: type=registry,ref=${{ secrets.DOCKERHUB_USERNAME }}/scrna-rstudio:buildcache
-          cache-to:   type=registry,ref=${{ secrets.DOCKERHUB_USERNAME }}/scrna-rstudio:buildcache,mode=max
+          cache-from: type=gha
+          cache-to:   type=gha,mode=max=max
